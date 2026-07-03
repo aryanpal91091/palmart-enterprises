@@ -1,0 +1,395 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+}
+
+enum InventoryLogType {
+  STOCK_IN
+  STOCK_OUT
+  TRANSFER_IN
+  TRANSFER_OUT
+  DAMAGE
+  ADJUSTMENT
+  RETURN
+}
+
+enum PurchaseStatus {
+  PENDING
+  RECEIVED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  DUE
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+  SPLIT
+}
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  SALARY
+  INTERNET
+  MAINTENANCE
+  TRANSPORT
+  MISC
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALFDAY
+}
+
+enum NotificationType {
+  LOW_STOCK
+  EXPIRY_ALERT
+  NEW_ORDER
+  PAYMENT_RECEIVED
+  SYSTEM
+}
+
+enum LoyaltyType {
+  EARNED
+  REDEEMED
+}
+
+model User {
+  id            String       @id @default(uuid())
+  name          String
+  email         String       @unique
+  passwordHash  String
+  role          Role         @default(CASHIER)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  // Relations
+  sales         Sale[]       @relation("CashierSales")
+  attendance    Attendance[]
+  leaves        Leave[]
+  auditLogs     AuditLog[]
+  notifications Notification[]
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  description String?
+  products    Product[]
+}
+
+model Brand {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  products    Product[]
+}
+
+model Product {
+  id              String       @id @default(uuid())
+  name            String
+  description     String?
+  sku             String       @unique
+  barcode         String?      @unique
+  imageUrl        String?
+  unit            String       @default("pcs") // e.g., kg, pcs, pack
+  costPrice       Float
+  sellingPrice    Float
+  discount        Float        @default(0.0) // Discount amount or percentage (we'll store as percentage, e.g., 10%)
+  gstPercent      Float        @default(18.0) // Default GST rate
+  mfgDate         DateTime?
+  expDate         DateTime?
+  batchNumber     String?
+  currentStock    Int          @default(0)
+  minStockLevel   Int          @default(5)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Foreign keys
+  categoryId      String
+  brandId         String
+  supplierId      String?
+
+  // Relations
+  category        Category     @relation(fields: [categoryId], references: [id])
+  brand           Brand        @relation(fields: [brandId], references: [id])
+  supplier        Supplier?    @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  inventoryLogs   InventoryLog[]
+  purchaseItems   PurchaseOrderItem[]
+  saleItems       SaleItem[]
+  returns         Return[]
+
+  @@index([sku])
+  @@index([barcode])
+}
+
+model InventoryLog {
+  id             String           @id @default(uuid())
+  productId      String
+  quantityChange Int              // Positive for stock-in/return, negative for sales/damage
+  type           InventoryLogType
+  reason         String?
+  location       String?          // For stock transfer details
+  createdAt      DateTime         @default(now())
+
+  // Relations
+  product        Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Supplier {
+  id                 String          @id @default(uuid())
+  name               String
+  contactName        String?
+  email              String?
+  phone              String
+  address            String?
+  outstandingBalance Float           @default(0.0)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  // Relations
+  products           Product[]
+  purchaseOrders     PurchaseOrder[]
+}
+
+model Customer {
+  id                 String               @id @default(uuid())
+  name               String
+  email              String?              @unique
+  phone              String               @unique
+  address            String?
+  outstandingBalance Float                @default(0.0)
+  loyaltyPoints      Int                  @default(0)
+  membershipLevel    String               @default("REGULAR") // REGULAR, SILVER, GOLD, PLATINUM
+  notes              String?
+  birthday           DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  // Relations
+  sales              Sale[]
+  loyaltyTransactions LoyaltyTransaction[]
+}
+
+model PurchaseOrder {
+  id            String              @id @default(uuid())
+  supplierId    String
+  status        PurchaseStatus      @default(PENDING)
+  totalAmount   Float
+  createdAt     DateTime            @default(now())
+  receivedAt    DateTime?
+  updatedAt     DateTime            @updatedAt
+
+  // Relations
+  supplier      Supplier            @relation(fields: [supplierId], references: [id])
+  items         PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  costPrice       Float
+
+  // Relations
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id])
+}
+
+model Sale {
+  id             String         @id @default(uuid())
+  customerId     String?
+  cashierId      String
+  subTotal       Float
+  discountAmount Float          @default(0.0)
+  gstAmount      Float          @default(0.0)
+  totalAmount    Float
+  paymentMethod  PaymentMethod  @default(CASH)
+  paymentStatus  PaymentStatus  @default(PAID)
+  couponId       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  // Relations
+  customer            Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  cashier             User                 @relation("CashierSales", fields: [cashierId], references: [id])
+  coupon              Coupon?              @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items               SaleItem[]
+  payments            Payment[]
+  returns             Return[]
+  loyaltyTransactions LoyaltyTransaction[]
+}
+
+model SaleItem {
+  id             String   @id @default(uuid())
+  saleId         String
+  productId      String
+  quantity       Int
+  sellingPrice   Float
+  discountAmount Float    @default(0.0)
+  gstAmount      Float    @default(0.0)
+  total          Float
+
+  // Relations
+  sale           Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product        Product  @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  saleId      String
+  amount      Float
+  method      PaymentMethod
+  createdAt   DateTime      @default(now())
+
+  // Relations
+  sale        Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  title       String
+  category    ExpenseCategory
+  amount      Float
+  date        DateTime        @default(now())
+  description String?
+  receiptUrl  String?
+}
+
+model Return {
+  id           String   @id @default(uuid())
+  saleId       String
+  productId    String
+  quantity     Int
+  reason       String
+  refundAmount Float
+  createdAt    DateTime @default(now())
+
+  // Relations
+  sale         Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product      Product  @relation(fields: [productId], references: [id])
+}
+
+model Coupon {
+  id             String    @id @default(uuid())
+  code           String    @unique
+  discountType   String    // PERCENTAGE or FIXED
+  value          Float
+  minOrderAmount Float     @default(0.0)
+  expiryDate     DateTime
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+
+  // Relations
+  sales          Sale[]
+}
+
+model LoyaltyTransaction {
+  id         String      @id @default(uuid())
+  customerId String
+  points     Int
+  type       LoyaltyType
+  saleId     String?
+  createdAt  DateTime    @default(now())
+
+  // Relations
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  sale       Sale?       @relation(fields: [saleId], references: [id], onDelete: SetNull)
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String?          // If specific to a user, else system-wide
+  title     String
+  message   String
+  type      NotificationType @default(SYSTEM)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user      User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Settings {
+  id            String   @id @default("default")
+  storeName     String   @default("Mart Management Pro")
+  storeLogo     String?
+  gstNumber     String   @default("29GGGGG1111A1Z1")
+  address       String   @default("123 Main Street, Bangalore")
+  phone         String   @default("+91 98765 43210")
+  email         String   @default("support@martpro.com")
+  currency      String   @default("INR") // e.g., USD, INR, EUR
+  taxRate       Float    @default(18.0)
+  theme         String   @default("dark")
+  language      String   @default("en")
+  invoiceFooter String   @default("Thank you for shopping with us!")
+}
+
+model Attendance {
+  id         String           @id @default(uuid())
+  employeeId String
+  date       DateTime         @default(now())
+  checkIn    DateTime
+  checkOut   DateTime?
+  status     AttendanceStatus @default(PRESENT)
+
+  // Relations
+  employee   User             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
+
+model Leave {
+  id         String      @id @default(uuid())
+  employeeId String
+  startDate  DateTime
+  endDate    DateTime
+  type       LeaveType
+  status     LeaveStatus @default(PENDING)
+  reason     String
+
+  // Relations
+  employee   User        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+}
