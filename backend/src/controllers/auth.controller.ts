@@ -33,13 +33,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       accessSecret,
-      { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
+      { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as string }
     );
 
     const refreshToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       refreshSecret,
-      { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
+      { expiresIn: (process.env.JWT_REFRESH_EXPIRY || '7d') as string }
     );
 
     // Save Audit Log
@@ -87,7 +87,7 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     const newAccessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       accessSecret,
-      { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
+      { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as string }
     );
 
     return res.status(200).json({ accessToken: newAccessToken });
