@@ -19,7 +19,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Forgot password flow states
+  const switchView = (newView: 'LOGIN' | 'FORGOT' | 'RESET') => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    setView(newView);
+  };
   const [view, setView] = useState<'LOGIN' | 'FORGOT' | 'RESET'>('LOGIN');
   const [forgotEmail, setForgotEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -141,7 +145,7 @@ export default function Login() {
                 <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">Password</label>
                 <button
                   type="button"
-                  onClick={() => setView('FORGOT')}
+                  onClick={() => switchView('FORGOT')}
                   className="text-xs text-brand-400 hover:underline"
                 >
                   Forgot Password?
@@ -196,7 +200,7 @@ export default function Login() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setView('LOGIN')}
+                onClick={() => switchView('LOGIN')}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl py-3 font-semibold transition-all border border-zinc-700/50"
               >
                 Back
@@ -242,7 +246,7 @@ export default function Login() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setView('LOGIN')}
+                onClick={() => switchView('LOGIN')}
                 className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl py-3 font-semibold transition-all border border-zinc-700/50"
               >
                 Cancel

@@ -37,7 +37,7 @@ export const authenticateJWT = async (req: AuthenticatedRequest, res: Response, 
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Access Denied: Invalid or Expired Token' });
+    return res.status(401).json({ message: 'Access Denied: Invalid or Expired Token' });
   }
 };
 

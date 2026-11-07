@@ -1,26 +1,37 @@
-import { PrismaClient, Role } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
+import {
+  PrismaClient,
+  Role,
+  InventoryLogType,
+  PaymentMethod,
+  PaymentStatus,
+  AttendanceStatus,
+  NotificationType,
+  LoyaltyType,
+} from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database...');
 
-  // 1. Delete all existing records (safe clean start)
+  // 1. Delete all existing records in foreign-key safe order (safe clean start)
   await prisma.settings.deleteMany();
   await prisma.auditLog.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.loyaltyTransaction.deleteMany();
-  await prisma.coupon.deleteMany();
   await prisma.return.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.saleItem.deleteMany();
   await prisma.sale.deleteMany();
+  await prisma.coupon.deleteMany();
   await prisma.purchaseOrderItem.deleteMany();
   await prisma.purchaseOrder.deleteMany();
   await prisma.inventoryLog.deleteMany();
+  await prisma.expense.deleteMany();
   await prisma.product.deleteMany();
   await prisma.supplier.deleteMany();
+  await prisma.customer.deleteMany();
   await prisma.brand.deleteMany();
   await prisma.category.deleteMany();
   await prisma.leave.deleteMany();
@@ -239,12 +250,12 @@ async function main() {
   // 8. Create Stock Logs
   await prisma.inventoryLog.createMany({
     data: [
-      { productId: prodRice.id, quantityChange: 150, type: 'STOCK_IN', reason: 'Initial inventory load' },
-      { productId: prodCoke.id, quantityChange: 300, type: 'STOCK_IN', reason: 'Supplier purchase' },
-      { productId: prodMilk.id, quantityChange: 100, type: 'STOCK_IN', reason: 'Daily morning delivery' },
-      { productId: prodMilk.id, quantityChange: -96, type: 'STOCK_OUT', reason: 'Fulfillment sales & spills' },
-      { productId: prodMarie.id, quantityChange: 80, type: 'STOCK_IN', reason: 'Weekly snacks restock' },
-      { productId: prodDove.id, quantityChange: 12, type: 'STOCK_IN', reason: 'Initial soap stock' },
+      { productId: prodRice.id, quantityChange: 150, type: InventoryLogType.STOCK_IN, reason: 'Initial inventory load' },
+      { productId: prodCoke.id, quantityChange: 300, type: InventoryLogType.STOCK_IN, reason: 'Supplier purchase' },
+      { productId: prodMilk.id, quantityChange: 100, type: InventoryLogType.STOCK_IN, reason: 'Daily morning delivery' },
+      { productId: prodMilk.id, quantityChange: -96, type: InventoryLogType.STOCK_OUT, reason: 'Fulfillment sales & spills' },
+      { productId: prodMarie.id, quantityChange: 80, type: InventoryLogType.STOCK_IN, reason: 'Weekly snacks restock' },
+      { productId: prodDove.id, quantityChange: 12, type: InventoryLogType.STOCK_IN, reason: 'Initial soap stock' },
     ],
   });
 
@@ -297,8 +308,8 @@ async function main() {
       discountAmount: 19.5,
       gstAmount: 19.5, // 5% average
       totalAmount: 390.0,
-      paymentMethod: 'UPI',
-      paymentStatus: 'PAID',
+      paymentMethod: PaymentMethod.UPI,
+      paymentStatus: PaymentStatus.PAID,
       createdAt: yesterday,
       items: {
         create: [
@@ -306,7 +317,7 @@ async function main() {
         ],
       },
       payments: {
-        create: { amount: 390.0, method: 'UPI', createdAt: yesterday },
+        create: { amount: 390.0, method: PaymentMethod.UPI, createdAt: yesterday },
       },
     },
   });
@@ -320,8 +331,8 @@ async function main() {
       discountAmount: 35.0, // Coupon applied
       gstAmount: 51.3,
       totalAmount: 366.3,
-      paymentMethod: 'SPLIT',
-      paymentStatus: 'PAID',
+      paymentMethod: PaymentMethod.SPLIT,
+      paymentStatus: PaymentStatus.PAID,
       createdAt: new Date(),
       items: {
         create: [
@@ -332,8 +343,8 @@ async function main() {
       payments: {
         createMany: {
           data: [
-            { amount: 166.3, method: 'CASH' },
-            { amount: 200.0, method: 'CARD' },
+            { amount: 166.3, method: PaymentMethod.CASH },
+            { amount: 200.0, method: PaymentMethod.CARD },
           ],
         },
       },
@@ -343,25 +354,25 @@ async function main() {
   // 12. Create Loyalty Transactions
   await prisma.loyaltyTransaction.createMany({
     data: [
-      { customerId: custRohan.id, points: 39, type: 'EARNED', saleId: sale1.id, createdAt: yesterday },
-      { customerId: custPriya.id, points: 36, type: 'EARNED', saleId: sale2.id, createdAt: new Date() },
+      { customerId: custRohan.id, points: 39, type: LoyaltyType.EARNED, saleId: sale1.id, createdAt: yesterday },
+      { customerId: custPriya.id, points: 36, type: LoyaltyType.EARNED, saleId: sale2.id, createdAt: new Date() },
     ],
   });
 
   // 13. Create Attendance
   await prisma.attendance.createMany({
     data: [
-      { employeeId: cashier.id, checkIn: new Date('2026-07-01T09:00:00'), checkOut: new Date('2026-07-01T18:00:00'), status: 'PRESENT', date: new Date('2026-07-01') },
-      { employeeId: cashier.id, checkIn: new Date('2026-07-02T08:58:00'), status: 'PRESENT', date: new Date('2026-07-02') },
-      { employeeId: manager.id, checkIn: new Date('2026-07-02T08:45:00'), status: 'PRESENT', date: new Date('2026-07-02') },
+      { employeeId: cashier.id, checkIn: new Date('2026-07-01T09:00:00'), checkOut: new Date('2026-07-01T18:00:00'), status: AttendanceStatus.PRESENT, date: new Date('2026-07-01') },
+      { employeeId: cashier.id, checkIn: new Date('2026-07-02T08:58:00'), status: AttendanceStatus.PRESENT, date: new Date('2026-07-02') },
+      { employeeId: manager.id, checkIn: new Date('2026-07-02T08:45:00'), status: AttendanceStatus.PRESENT, date: new Date('2026-07-02') },
     ],
   });
 
   // 14. Create Notifications
   await prisma.notification.createMany({
     data: [
-      { title: 'Low Stock Alert', message: 'Product Amul Taaza Toned Milk is below safety stock limits (4 left).', type: 'LOW_STOCK' },
-      { title: 'Expiry Warning', message: 'Product Amul Taaza Toned Milk is expiring in 2 days.', type: 'EXPIRY_ALERT' },
+      { title: 'Low Stock Alert', message: 'Product Amul Taaza Toned Milk is below safety stock limits (4 left).', type: NotificationType.LOW_STOCK },
+      { title: 'Expiry Warning', message: 'Product Amul Taaza Toned Milk is expiring in 2 days.', type: NotificationType.EXPIRY_ALERT },
     ],
   });
 

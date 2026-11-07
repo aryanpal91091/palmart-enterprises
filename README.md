@@ -1,6 +1,19 @@
 # PalMart Enterprise Pro - POS & Inventory Management System
 
-PalMart Pro is a production-ready, full-stack enterprise-grade Supermarket POS and Inventory Management system. Built with **React 19**, **Node/Express**, **Prisma ORM**, and **PostgreSQL**, it integrates automated inventory ledger tracing, multi-role cashier access controls, market basket co-occurrence analytics, and statistical demand forecasting.
+**PalMart Enterprises** is a production-ready, full-stack supermarket management and POS (Point of Sale) platform designed to simplify retail operations through digital billing, automated inventory management, product tracking, and business administration.
+
+Built with **React 19**, **Vite**, **Tailwind CSS**, **Redux**, **Node/Express**, **Prisma ORM**, and **PostgreSQL**.
+
+---
+
+### Production Deployment
+
+- **Status:** 🟢 Ready – Production
+- **Live Website:** [https://palmart-enterprises.vercel.app/](https://palmart-enterprises.vercel.app/)
+- **GitHub Repository:** [https://github.com/aryanpal91091/palmart-enterprises](https://github.com/aryanpal91091/palmart-enterprises)
+- **Deployment Platform:** Vercel
+- **Branch:** `main`
+- **Deployment Method:** Git Integration
 
 ---
 

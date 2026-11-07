@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt, { type SignOptions } from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { Role } from '@prisma/client';
 import prisma from '../config/db.js';
 import { AuthenticatedRequest } from '../middleware/auth.middleware.js';
@@ -49,13 +49,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const accessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       accessSecret,
-      { expiresIn: getJwtExpiry(process.env.JWT_ACCESS_EXPIRY, '15m') }
+      { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
     );
 
     const refreshToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       refreshSecret,
-      { expiresIn: getJwtExpiry(process.env.JWT_REFRESH_EXPIRY, '7d') }
+      { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
     );
 
     // Save Audit Log
@@ -103,7 +103,7 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     const newAccessToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       accessSecret,
-      { expiresIn: getJwtExpiry(process.env.JWT_ACCESS_EXPIRY, '15m') }
+      { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
     );
 
     return res.status(200).json({ accessToken: newAccessToken });

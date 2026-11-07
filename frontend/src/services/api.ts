@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base API URL linked through dev proxy or production environment
-const API_URL = '/api';
+const API_URL = (import.meta.env.VITE_API_URL as string) || '/api';
 
 const api = axios.create({
   baseURL: API_URL,
